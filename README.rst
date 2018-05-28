@@ -17,7 +17,7 @@ SpeechRecognition
     :target: https://pypi.python.org/pypi/SpeechRecognition/
     :alt: License
 
-.. image:: https://img.shields.io/travis/Uberi/speech_recognition.svg
+.. image:: https://api.travis-ci.org/Uberi/speech_recognition.svg?branch=master
     :target: https://travis-ci.org/Uberi/speech_recognition
     :alt: Continuous Integration Test Results
 
@@ -32,6 +32,7 @@ Speech recognition engine/API support:
 * `Microsoft Bing Voice Recognition <https://www.microsoft.com/cognitive-services/en-us/speech-api>`__
 * `Houndify API <https://houndify.com/>`__
 * `IBM Speech to Text <http://www.ibm.com/smarterplanet/us/en/ibmwatson/developercloud/speech-to-text.html>`__
+* `Snowboy Hotword Detection <https://snowboy.kitt.ai/>`__ (works offline)
 
 **Quickstart:** ``pip install SpeechRecognition``. See the "Installing" section for more details.
 
@@ -80,7 +81,7 @@ Requirements
 To use all of the functionality of the library, you should have:
 
 * **Python** 2.6, 2.7, or 3.3+ (required)
-* **PyAudio** 0.2.9+ (required only if you need to use microphone input, ``Microphone``)
+* **PyAudio** 0.2.11+ (required only if you need to use microphone input, ``Microphone``)
 * **PocketSphinx** (required only if you need to use the Sphinx recognizer, ``recognizer_instance.recognize_sphinx``)
 * **Google API Client Library for Python** (required only if you need to use the Google Cloud Speech API, ``recognizer_instance.recognize_google_cloud``)
 * **FLAC encoder** (required only if the system is not x86-based Windows/Linux/OS X)
@@ -100,19 +101,19 @@ The first software requirement is `Python 2.6, 2.7, or Python 3.3+ <https://www.
 PyAudio (for microphone users)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-`PyAudio <http://people.csail.mit.edu/hubert/pyaudio/#downloads>`__ is required if and only if you want to use microphone input (``Microphone``). PyAudio version 0.2.9+ is required, as earlier versions have overflow issues with recording on certain machines.
+`PyAudio <http://people.csail.mit.edu/hubert/pyaudio/#downloads>`__ is required if and only if you want to use microphone input (``Microphone``). PyAudio version 0.2.11+ is required, as earlier versions have known memory management bugs when recording from microphones in certain situations.
 
 If not installed, everything in the library will still work, except attempting to instantiate a ``Microphone`` object will raise an ``AttributeError``.
 
-The installation instructions are quite good as of PyAudio v0.2.9. For convenience, they are summarized below:
+The installation instructions on the PyAudio website are quite good - for convenience, they are summarized below:
 
 * On Windows, install PyAudio using `Pip <https://pip.readthedocs.org/>`__: execute ``pip install pyaudio`` in a terminal.
 * On Debian-derived Linux distributions (like Ubuntu and Mint), install PyAudio using `APT <https://wiki.debian.org/Apt>`__: execute ``sudo apt-get install python-pyaudio python3-pyaudio`` in a terminal.
     * If the version in the repositories is too old, install the latest release using Pip: execute ``sudo apt-get install portaudio19-dev python-all-dev python3-all-dev && sudo pip install pyaudio`` (replace ``pip`` with ``pip3`` if using Python 3).
-* On OS X, install PortAudio using `Homebrew <http://brew.sh/>`__: ``brew install portaudio && sudo brew link portaudio``. Then, install PyAudio using `Pip <https://pip.readthedocs.org/>`__: ``pip install pyaudio``.
+* On OS X, install PortAudio using `Homebrew <http://brew.sh/>`__: ``brew install portaudio``. Then, install PyAudio using `Pip <https://pip.readthedocs.org/>`__: ``pip install pyaudio``.
 * On other POSIX-based systems, install the ``portaudio19-dev`` and ``python-all-dev`` (or ``python3-all-dev`` if using Python 3) packages (or their closest equivalents) using a package manager of your choice, and then install PyAudio using `Pip <https://pip.readthedocs.org/>`__: ``pip install pyaudio`` (replace ``pip`` with ``pip3`` if using Python 3).
 
-PyAudio `wheel packages <https://pypi.python.org/pypi/wheel>`__ for 64-bit Python 2.7, 3.4, and 3.5 on Windows and Linux are included for convenience, under the ``third-party/`` `directory <https://github.com/Uberi/speech_recognition/tree/master/third-party>`__ in the repository root. To install, simply run ``pip install wheel`` followed by ``pip install ./third-party/WHEEL_FILENAME`` (replace ``pip`` with ``pip3`` if using Python 3) in the repository `root directory <https://github.com/Uberi/speech_recognition>`__.
+PyAudio `wheel packages <https://pypi.python.org/pypi/wheel>`__ for common 64-bit Python versions on Windows and Linux are included for convenience, under the ``third-party/`` `directory <https://github.com/Uberi/speech_recognition/tree/master/third-party>`__ in the repository root. To install, simply run ``pip install wheel`` followed by ``pip install ./third-party/WHEEL_FILENAME`` (replace ``pip`` with ``pip3`` if using Python 3) in the repository `root directory <https://github.com/Uberi/speech_recognition>`__.
 
 PocketSphinx-Python (for Sphinx users)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -182,6 +183,42 @@ Try setting the recognition language to your language/dialect. To do this, see t
 
 For example, if your language/dialect is British English, it is better to use ``"en-GB"`` as the language rather than ``"en-US"``.
 
+The recognizer hangs on ``recognizer_instance.listen``; specifically, when it's calling ``Microphone.MicrophoneStream.read``.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This usually happens when you're using a Raspberry Pi board, which doesn't have audio input capabilities by itself. This causes the default microphone used by PyAudio to simply block when we try to read it. If you happen to be using a Raspberry Pi, you'll need a USB sound card (or USB microphone).
+
+Once you do this, change all instances of ``Microphone()`` to ``Microphone(device_index=MICROPHONE_INDEX)``, where ``MICROPHONE_INDEX`` is the hardware-specific index of the microphone.
+
+To figure out what the value of ``MICROPHONE_INDEX`` should be, run the following code:
+
+.. code:: python
+
+    import speech_recognition as sr
+    for index, name in enumerate(sr.Microphone.list_microphone_names()):
+        print("Microphone with name \"{1}\" found for `Microphone(device_index={0})`".format(index, name))
+
+This will print out something like the following:
+
+::
+
+    Microphone with name "HDA Intel HDMI: 0 (hw:0,3)" found for `Microphone(device_index=0)`
+    Microphone with name "HDA Intel HDMI: 1 (hw:0,7)" found for `Microphone(device_index=1)`
+    Microphone with name "HDA Intel HDMI: 2 (hw:0,8)" found for `Microphone(device_index=2)`
+    Microphone with name "Blue Snowball: USB Audio (hw:1,0)" found for `Microphone(device_index=3)`
+    Microphone with name "hdmi" found for `Microphone(device_index=4)`
+    Microphone with name "pulse" found for `Microphone(device_index=5)`
+    Microphone with name "default" found for `Microphone(device_index=6)`
+
+Now, to use the Snowball microphone, you would change ``Microphone()`` to ``Microphone(device_index=3)``.
+
+Calling ``Microphone()`` gives the error ``IOError: No Default Input Device Available``.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+As the error says, the program doesn't know which microphone to use.
+
+To proceed, either use ``Microphone(device_index=MICROPHONE_INDEX, ...)`` instead of ``Microphone(...)``, or set a default microphone in your OS. You can obtain possible values of ``MICROPHONE_INDEX`` using the code in the troubleshooting entry right above this one.
+
 The code examples raise ``UnicodeEncodeError: 'ascii' codec can't encode character`` when run.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -217,6 +254,8 @@ The "bt_audio_service_open" error means that you have a Bluetooth audio device, 
 
 For errors of the form "ALSA lib [...] Unknown PCM", see `this StackOverflow answer <http://stackoverflow.com/questions/7088672/pyaudio-working-but-spits-out-error-messages-each-time>`__. Basically, to get rid of an error of the form "Unknown PCM cards.pcm.rear", simply comment out ``pcm.rear cards.pcm.rear`` in ``/usr/share/alsa/alsa.conf``, ``~/.asoundrc``, and ``/etc/asound.conf``.
 
+For "jack server is not running or cannot be started" or "connect(2) call to /dev/shm/jack-1000/default/jack_0 failed (err=No such file or directory)" or "attempt to connect to server failed", these are caused by ALSA trying to connect to JACK, and can be safely ignored. I'm not aware of any simple way to turn those messages off at this time, besides [entirely disabling printing while starting the microphone](https://github.com/Uberi/speech_recognition/issues/182#issuecomment-266256337).
+
 On OS X, I get a ``ChildProcessError`` saying that it couldn't find the system FLAC converter, even though it's installed.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -237,9 +276,9 @@ To hack on this library, first make sure you have all the requirements listed in
 
 To install/reinstall the library locally, run ``python setup.py install`` in the project `root directory <https://github.com/Uberi/speech_recognition>`__.
 
-Before a release, version tags are created using ``git config user.signingkey DB45F6C431DE7C2DCD99FF7904882258A4063489 && git tag -s VERSION_GOES_HERE -m "Version VERSION_GOES_HERE"``.
+Before a release, the version number is bumped in ``README.rst`` and ``speech_recognition/__init__.py``. Version tags are then created using ``git config gpg.program gpg2 && git config user.signingkey DB45F6C431DE7C2DCD99FF7904882258A4063489 && git tag -s VERSION_GOES_HERE -m "Version VERSION_GOES_HERE"``.
 
-Releases are done by running ``build.sh`` to build the Python source packages, sign them, and upload them to PyPI.
+Releases are done by running ``make-release.sh VERSION_GOES_HERE`` to build the Python source packages, sign them, and upload them to PyPI.
 
 Testing
 ~~~~~~~
@@ -257,17 +296,17 @@ Testing is also done automatically by TravisCI, upon every push. To set up the e
     sudo docker run --volume "$(pwd):/speech_recognition" --interactive --tty quay.io/travisci/travis-python:latest /bin/bash
     su - travis && cd /speech_recognition
     sudo apt-get update && sudo apt-get install swig libpulse-dev
-    pip install --user pocketsphinx monotonic && pip install --user flake8 rstcheck && sudo pip install --user -e .
+    pip install --user pocketsphinx monotonic && pip install --user flake8 rstcheck && pip install --user -e .
     python -m unittest discover --verbose # run unit tests
-    flake8 --ignore=E501,E701 speech_recognition # ignore errors for long lines and multi-statement lines
-    rstcheck README.rst reference/*.rst # ensure RST is well-formed
+    python -m flake8 --ignore=E501,E701 speech_recognition tests examples setup.py # ignore errors for long lines and multi-statement lines
+    python -m rstcheck README.rst reference/*.rst # ensure RST is well-formed
 
 FLAC Executables
 ~~~~~~~~~~~~~~~~
 
-The included ``flac-win32`` executable is the `official FLAC 1.3.1 32-bit Windows binary <http://downloads.xiph.org/releases/flac/flac-1.3.1-win.zip>`__.
+The included ``flac-win32`` executable is the `official FLAC 1.3.2 32-bit Windows binary <http://downloads.xiph.org/releases/flac/flac-1.3.2-win.zip>`__.
 
-The included ``flac-linux-x86`` and ``flac-linux-x86_64`` executables are built from the `FLAC 1.3.1 source code <http://downloads.xiph.org/releases/flac/flac-1.3.1.tar.xz>`__ with `Manylinux <https://github.com/pypa/manylinux>`__ to ensure that it's compatible with a wide variety of distributions.
+The included ``flac-linux-x86`` and ``flac-linux-x86_64`` executables are built from the `FLAC 1.3.2 source code <http://downloads.xiph.org/releases/flac/flac-1.3.2.tar.xz>`__ with `Manylinux <https://github.com/pypa/manylinux>`__ to ensure that it's compatible with a wide variety of distributions.
 
 The built FLAC executables should be bit-for-bit reproducible. To rebuild them, run the following inside the project directory on a Debian-like system:
 
@@ -278,31 +317,31 @@ The built FLAC executables should be bit-for-bit reproducible. To rebuild them, 
     sudo apt-get install --yes docker.io
 
     # build FLAC inside the Manylinux i686 Docker image
-    tar xf flac-1.3.1.tar.xz
+    tar xf flac-1.3.2.tar.xz
     sudo docker run --tty --interactive --rm --volume "$(pwd):/root" quay.io/pypa/manylinux1_i686:latest bash
-        cd /root/flac-1.3.1
+        cd /root/flac-1.3.2
         ./configure LDFLAGS=-static # compiler flags to make a static build
         make
     exit
-    cp flac-1.3.1/src/flac/flac ../speech_recognition/flac-linux-x86 && sudo rm -rf flac-1.3.1/
+    cp flac-1.3.2/src/flac/flac ../speech_recognition/flac-linux-x86 && sudo rm -rf flac-1.3.2/
 
     # build FLAC inside the Manylinux x86_64 Docker image
-    tar xf flac-1.3.1.tar.xz
+    tar xf flac-1.3.2.tar.xz
     sudo docker run --tty --interactive --rm --volume "$(pwd):/root" quay.io/pypa/manylinux1_x86_64:latest bash
-        cd /root/flac-1.3.1
+        cd /root/flac-1.3.2
         ./configure LDFLAGS=-static # compiler flags to make a static build
         make
     exit
-    cp flac-1.3.1/src/flac/flac ../speech_recognition/flac-linux-x86_64 && sudo rm -r flac-1.3.1/
+    cp flac-1.3.2/src/flac/flac ../speech_recognition/flac-linux-x86_64 && sudo rm -r flac-1.3.2/
 
-The included ``flac-mac`` executable is extracted from `xACT 2.38 <http://xact.scottcbrown.org/>`__, which is a frontend for FLAC that conveniently includes binaries for all of its encoders. Specifically, it is a copy of ``xACT 2.38/xACT.app/Contents/Resources/flac`` in ``xACT2.38.zip``.
+The included ``flac-mac`` executable is extracted from `xACT 2.39 <http://xact.scottcbrown.org/>`__, which is a frontend for FLAC 1.3.2 that conveniently includes binaries for all of its encoders. Specifically, it is a copy of ``xACT 2.39/xACT.app/Contents/Resources/flac`` in ``xACT2.39.zip``.
 
 Authors
 -------
 
 ::
 
-    Uberi <azhang9@gmail.com> (Anthony Zhang)
+    Uberi <me@anthonyz.ca> (Anthony Zhang)
     bobsayshilol
     arvindch <achembarpu@gmail.com> (Arvind Chembarpu)
     kevinismith <kevin_i_smith@yahoo.com> (Kevin Smith)
@@ -313,23 +352,24 @@ Authors
     sbraden <braden.sarah@gmail.com> (Sarah Braden)
     tb0hdan (Bohdan Turkynewych)
     Thynix <steve@asksteved.com> (Steve Dougherty)
+    beeedy <broderick.carlin@gmail.com> (Broderick Carlin)
 
 Please report bugs and suggestions at the `issue tracker <https://github.com/Uberi/speech_recognition/issues>`__!
 
 How to cite this library (APA style):
 
-    Zhang, A. (2017). Speech Recognition (Version 3.6) [Software]. Available from https://github.com/Uberi/speech_recognition#readme.
+    Zhang, A. (2017). Speech Recognition (Version 3.8) [Software]. Available from https://github.com/Uberi/speech_recognition#readme.
 
 How to cite this library (Chicago style):
 
-    Zhang, Anthony. 2017. *Speech Recognition* (version 3.6).
+    Zhang, Anthony. 2017. *Speech Recognition* (version 3.8).
 
 Also check out the `Python Baidu Yuyin API <https://github.com/DelightRun/PyBaiduYuyin>`__, which is based on an older version of this project, and adds support for `Baidu Yuyin <http://yuyin.baidu.com/>`__. Note that Baidu Yuyin is only available inside China.
 
 License
 -------
 
-Copyright 2014-2017 `Anthony Zhang (Uberi) <https://uberi.github.io>`__. The source code for this library is available online at `GitHub <https://github.com/Uberi/speech_recognition>`__.
+Copyright 2014-2017 `Anthony Zhang (Uberi) <http://anthonyz.ca/>`__. The source code for this library is available online at `GitHub <https://github.com/Uberi/speech_recognition>`__.
 
 SpeechRecognition is made available under the 3-clause BSD license. See ``LICENSE.txt`` in the project's `root directory <https://github.com/Uberi/speech_recognition>`__ for more information.
 

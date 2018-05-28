@@ -9,9 +9,9 @@ AUDIO_FILE_FR = path.join(path.dirname(path.realpath(__file__)), "french.aiff")
 # use the audio file as the audio source
 r = sr.Recognizer()
 with sr.AudioFile(AUDIO_FILE_EN) as source:
-    audio_en = r.record(source) # read the entire audio file
+    audio_en = r.record(source)  # read the entire audio file
 with sr.AudioFile(AUDIO_FILE_FR) as source:
-    audio_fr = r.record(source) # read the entire audio file
+    audio_fr = r.record(source)  # read the entire audio file
 
 # recognize keywords using Sphinx
 try:
@@ -23,6 +23,16 @@ except sr.UnknownValueError:
     print("Sphinx could not understand audio")
 except sr.RequestError as e:
     print("Sphinx error; {0}".format(e))
+
+# grammar example using Sphinx
+try:
+    print("Sphinx recognition for \"one two three\" for counting grammar:")
+    print(r.recognize_sphinx(audio_en, grammar='counting.gram'))
+except sr.UnknownValueError:
+    print("Sphinx could not understand audio")
+except sr.RequestError as e:
+    print("Sphinx error; {0}".format(e))
+
 
 # recognize preferred phrases using Google Cloud Speech
 GOOGLE_CLOUD_SPEECH_CREDENTIALS = r"""INSERT THE CONTENTS OF THE GOOGLE CLOUD SPEECH JSON CREDENTIALS FILE HERE"""
